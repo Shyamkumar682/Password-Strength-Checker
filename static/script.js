@@ -15,6 +15,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const checkForm = document.getElementById('password-form');
     const toast = document.getElementById('toast');
 
+    // Password Search Box & Hint Dialog Elements
+    const inputBox = document.getElementById('input-box');
+    const passwordHintDialog = document.getElementById('password-hint-dialog');
+    const hintCloseBtn = document.getElementById('hint-close-btn');
+    let hintDismissTimer = null;
+
     // Generator elements
     const genLengthSlider = document.getElementById('gen-length');
     const genLengthVal = document.getElementById('gen-length-val');
@@ -80,7 +86,29 @@ document.addEventListener('DOMContentLoaded', () => {
         'Very Strong': document.getElementById('row-very-strong')
     };
 
+    // Modal Elements
+    const resultModal = document.getElementById('result-modal');
+    const modalCloseBtn = document.getElementById('modal-close-btn');
+    const modalDoneBtn = document.getElementById('modal-done-btn');
+    const modalScrollBtn = document.getElementById('modal-scroll-btn');
+    const modalStrengthCard = document.getElementById('modal-strength-card');
+    const modalStrengthBadge = document.getElementById('modal-strength-badge');
+    const modalEntropyVal = document.getElementById('modal-entropy-val');
+    const modalMeterFill = document.getElementById('modal-meter-fill');
+    const modalStrengthSummary = document.getElementById('modal-strength-summary');
+    const modalBreachBox = document.getElementById('modal-breach-box');
+    const modalBreachIcon = document.getElementById('modal-breach-icon');
+    const modalBreachTitle = document.getElementById('modal-breach-title');
+    const modalBreachDesc = document.getElementById('modal-breach-desc');
+    const modalStatLength = document.getElementById('modal-stat-length');
+    const modalStatPool = document.getElementById('modal-stat-pool');
+    const modalStatCrack = document.getElementById('modal-stat-crack');
+    const modalPatternBox = document.getElementById('modal-pattern-box');
+    const modalPatternText = document.getElementById('modal-pattern-text');
+
     let debounceTimer = null;
+    let lastEvaluatedPassword = null;
+    let lastEvaluatedData = null;
 
     // -------------------------------------------------------------
     // Real-Time Analysis via API
@@ -91,7 +119,9 @@ document.addEventListener('DOMContentLoaded', () => {
             resultsContent.classList.add('hidden');
             clearBtn.classList.add('hidden');
             highlightTableRow(null);
-            return;
+            lastEvaluatedPassword = null;
+            lastEvaluatedData = null;
+            return null;
         }
 
         clearBtn.classList.remove('hidden');
@@ -105,9 +135,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (!response.ok) throw new Error('API check failed');
             const data = await response.json();
+            lastEvaluatedPassword = pwd;
+            lastEvaluatedData = data;
             updateResultsUI(data);
+            return data;
         } catch (err) {
             console.error('Error checking password:', err);
+            return null;
         }
     }
 
@@ -246,9 +280,117 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // -------------------------------------------------------------
+    // Popup Modal Functions
+    // -------------------------------------------------------------
+    function openResultModal(data, pwd) {
+        if (!resultModal || !data) return;
+
+        const { length, entropy, strength, breach_info, char_analysis, crack_times, patterns } = data;
+
+        // Strength badge, meter & overview
+        if (modalStrengthBadge) {
+            modalStrengthBadge.className = `badge ${strength.badge_class}`;
+            modalStrengthBadge.textContent = strength.tier;
+        }
+        if (modalEntropyVal) {
+            modalEntropyVal.textContent = entropy.toFixed(2);
+        }
+        if (modalMeterFill) {
+            modalMeterFill.style.width = `${strength.score_percent}%`;
+            modalMeterFill.style.backgroundColor = strength.color;
+        }
+        if (modalStrengthSummary) {
+            modalStrengthSummary.textContent = strength.summary;
+        }
+        if (modalStrengthCard) {
+            modalStrengthCard.style.borderColor = strength.color;
+            modalStrengthCard.style.boxShadow = `0 0 24px ${strength.color}33`;
+        }
+
+        // Breach info
+        if (modalBreachBox && modalBreachTitle && modalBreachDesc && modalBreachIcon) {
+            if (breach_info && breach_info.in_breach_list) {
+                modalBreachBox.className = 'modal-breach-box breach-danger';
+                modalBreachIcon.innerHTML = `
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="12" y1="8" x2="12" y2="12"></line>
+                        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                    </svg>`;
+                modalBreachTitle.textContent = '⚠ Compromised in Leaked Database!';
+                modalBreachDesc.textContent = breach_info.details || 'Found in compromised password datasets.';
+            } else {
+                modalBreachBox.className = 'modal-breach-box breach-safe';
+                modalBreachIcon.innerHTML = `
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                        <polyline points="9 12 11 14 15 10"></polyline>
+                    </svg>`;
+                modalBreachTitle.textContent = '✔ Safe from Known Leaks';
+                modalBreachDesc.textContent = 'No match found in 1,000,000+ local breached password database.';
+            }
+        }
+
+        // Fast metrics
+        if (modalStatLength) modalStatLength.textContent = `${length} chars`;
+        if (modalStatPool) modalStatPool.textContent = `R = ${char_analysis ? char_analysis.pool_size : 0}`;
+        if (modalStatCrack) {
+            const gpuTime = crack_times ? (crack_times.gpu_rig || crack_times.online_attack || 'Instant') : 'Instant';
+            modalStatCrack.textContent = gpuTime;
+        }
+
+        // Patterns & Heuristics warning
+        if (modalPatternBox && modalPatternText) {
+            if (patterns && patterns.length > 0) {
+                modalPatternBox.classList.remove('hidden');
+                modalPatternText.textContent = patterns.map(p => `${p.type}: ${p.desc}`).join(' | ');
+            } else {
+                modalPatternBox.classList.add('hidden');
+                modalPatternText.textContent = '';
+            }
+        }
+
+        // Reveal modal
+        resultModal.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeResultModal() {
+        if (!resultModal) return;
+        resultModal.classList.add('hidden');
+        document.body.style.overflow = '';
+    }
+
+    // -------------------------------------------------------------
+    // Generated Password Callout Hint Functions
+    // -------------------------------------------------------------
+    function showPasswordHint() {
+        if (!passwordHintDialog) return;
+        passwordHintDialog.classList.remove('hidden');
+        if (inputBox) inputBox.classList.add('input-glow-pulse');
+
+        clearTimeout(hintDismissTimer);
+        hintDismissTimer = setTimeout(() => {
+            hidePasswordHint();
+        }, 6000);
+    }
+
+    function hidePasswordHint() {
+        if (!passwordHintDialog) return;
+        passwordHintDialog.classList.add('hidden');
+        if (inputBox) inputBox.classList.remove('input-glow-pulse');
+        clearTimeout(hintDismissTimer);
+    }
+
+    if (hintCloseBtn) {
+        hintCloseBtn.addEventListener('click', hidePasswordHint);
+    }
+
+    // -------------------------------------------------------------
     // Event Listeners: Input & Realtime Debounce
     // -------------------------------------------------------------
     passwordInput.addEventListener('input', (e) => {
+        hidePasswordHint();
         clearTimeout(debounceTimer);
         const val = e.target.value;
         debounceTimer = setTimeout(() => {
@@ -256,8 +398,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 120);
     });
 
+    passwordInput.addEventListener('focus', () => {
+        if (inputBox) inputBox.classList.remove('input-glow-pulse');
+    });
+
     // Clear input
     clearBtn.addEventListener('click', () => {
+        hidePasswordHint();
         passwordInput.value = '';
         passwordInput.focus();
         evaluatePassword('');
@@ -265,6 +412,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Visibility toggle
     toggleBtn.addEventListener('click', () => {
+        hidePasswordHint();
         const isPassword = passwordInput.getAttribute('type') === 'password';
         passwordInput.setAttribute('type', isPassword ? 'text' : 'password');
         eyeIcon.classList.toggle('hidden', isPassword);
@@ -273,6 +421,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Copy to clipboard
     copyBtn.addEventListener('click', async () => {
+        hidePasswordHint();
         const pwd = passwordInput.value;
         if (!pwd) {
             showToast('No password entered to copy');
@@ -316,6 +465,84 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // -------------------------------------------------------------
+    // "Check Password" Button / Form Submission -> Popup Modal
+    // -------------------------------------------------------------
+    if (checkForm) {
+        checkForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const pwd = passwordInput.value;
+
+            if (!pwd || pwd.trim().length === 0) {
+                showToast('Please enter a password first!');
+                passwordInput.focus();
+                passwordInput.classList.add('input-shake');
+                setTimeout(() => passwordInput.classList.remove('input-shake'), 450);
+                return;
+            }
+
+            const checkBtn = document.getElementById('check-btn');
+            const origHtml = checkBtn.innerHTML;
+            checkBtn.disabled = true;
+            checkBtn.innerHTML = `
+                <svg class="spinner-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10" stroke-opacity="0.25"></circle>
+                    <path d="M12 2a10 10 0 0 1 10 10" stroke-opacity="0.9"></path>
+                </svg>
+                <span>Analyzing...</span>
+            `;
+
+            try {
+                let data = null;
+                // If the user hasn't changed the password and we already evaluated it, reuse it
+                if (lastEvaluatedData && lastEvaluatedPassword === pwd) {
+                    data = lastEvaluatedData;
+                } else {
+                    data = await evaluatePassword(pwd);
+                }
+
+                if (data) {
+                    openResultModal(data, pwd);
+                } else {
+                    showToast('Could not evaluate password');
+                }
+            } catch (err) {
+                console.error('Error during check:', err);
+                showToast('Error analyzing password');
+            } finally {
+                checkBtn.disabled = false;
+                checkBtn.innerHTML = origHtml;
+            }
+        });
+    }
+
+    // Modal Interaction Listeners
+    if (modalCloseBtn) modalCloseBtn.addEventListener('click', closeResultModal);
+    if (modalDoneBtn) modalDoneBtn.addEventListener('click', closeResultModal);
+
+    if (modalScrollBtn) {
+        modalScrollBtn.addEventListener('click', () => {
+            closeResultModal();
+            setTimeout(() => {
+                resultsContent.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 150);
+        });
+    }
+
+    if (resultModal) {
+        resultModal.addEventListener('click', (e) => {
+            if (e.target === resultModal) {
+                closeResultModal();
+            }
+        });
+    }
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && resultModal && !resultModal.classList.contains('hidden')) {
+            closeResultModal();
+        }
+    });
+
+    // -------------------------------------------------------------
     // Password Generator
     // -------------------------------------------------------------
     genLengthSlider.addEventListener('input', (e) => {
@@ -337,12 +564,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
             passwordInput.value = data.password;
             updateResultsUI(data.evaluation);
+            clearBtn.classList.remove('hidden');
+
+            // Scroll UP to the password search/input box
+            const targetElement = passwordHintDialog || inputBox || passwordInput;
+            targetElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+            // Show "Your password is here" callout dialog & glowing pulse
+            showPasswordHint();
+            passwordInput.focus();
+
             showToast('New strong password generated!');
-            if (window.innerWidth <= 992) {
-                setTimeout(() => {
-                    resultsContent.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                }, 100);
-            }
         } catch (err) {
             console.error('Failed to generate password:', err);
         }

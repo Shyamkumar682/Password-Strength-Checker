@@ -55,6 +55,18 @@
                 <form id="password-form" method="POST" action="/" class="form-container">
                     <div class="input-group-wrapper">
                         <label for="password-input" class="sr-only">Password</label>
+
+                        <!-- Generated Password Callout Dialog -->
+                        <div id="password-hint-dialog" class="password-hint-dialog hidden" role="status" aria-live="polite">
+                            <div class="hint-dialog-bubble">
+                                <span class="hint-sparkle">✨</span>
+                                <span class="hint-text">Your password is here</span>
+                                <span class="hint-arrow-down">👇</span>
+                                <button type="button" id="hint-close-btn" class="hint-close-btn" title="Dismiss" aria-label="Dismiss">&times;</button>
+                            </div>
+                            <div class="hint-pointer-arrow"></div>
+                        </div>
+
                         <div class="input-field-box" id="input-box">
                             <input 
                                 type="password" 
@@ -206,7 +218,7 @@
                 <div id="results-content" class="results-content {{ '' if result else 'hidden' }}">
                     
                     <!-- Top Status Banner -->
-                    <div class="status-banner" id="status-banner" style="border-color: {{ result.strength.color if result else '#4F46E5' }}">
+                    <div class="status-banner" id="status-banner">
                         <div class="banner-top-row">
                             <div class="tier-badge-group">
                                 <span class="badge {{ result.strength.badge_class if result else 'moderate' }}" id="strength-badge">
@@ -227,7 +239,7 @@
 
                         <!-- Animated Strength Bar -->
                         <div class="meter-bar-container">
-                            <div class="meter-bar-fill" id="meter-fill" style="width: {{ result.strength.score_percent if result else 0 }}%; background-color: {{ result.strength.color if result else '#10B981' }};"></div>
+                            <div class="meter-bar-fill" id="meter-fill"></div>
                         </div>
                         <p class="strength-summary-text" id="strength-summary">
                             {{ result.strength.summary if result else '' }}
@@ -541,6 +553,93 @@
                 Python &amp; Flask &bull; Shannon Entropy Engine &bull; Zero External Network Requests
             </p>
         </footer>
+    </div>
+
+    <!-- Security Analysis Popup Modal -->
+    <div id="result-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+        <div class="modal-dialog">
+            <div class="modal-header">
+                <div class="modal-header-title">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="modal-title-icon">
+                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                    </svg>
+                    <h3 id="modal-title">Security Analysis Report</h3>
+                </div>
+                <button type="button" id="modal-close-btn" class="modal-close-btn" title="Close modal" aria-label="Close modal">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+
+            <div class="modal-body">
+                <!-- Strength Overview Card -->
+                <div id="modal-strength-card" class="modal-strength-card">
+                    <div class="modal-strength-top">
+                        <span id="modal-strength-badge" class="badge">Analyzing...</span>
+                        <div class="modal-entropy-display">
+                            <span id="modal-entropy-val" class="modal-entropy-num">0.00</span>
+                            <span class="modal-entropy-unit">bits entropy</span>
+                        </div>
+                    </div>
+                    <div class="modal-meter-track">
+                        <div id="modal-meter-fill" class="meter-bar-fill"></div>
+                    </div>
+                    <p id="modal-strength-summary" class="modal-summary-text"></p>
+                </div>
+
+                <!-- Breach Status Box -->
+                <div id="modal-breach-box" class="modal-breach-box">
+                    <div id="modal-breach-icon" class="modal-breach-icon"></div>
+                    <div class="modal-breach-text">
+                        <h4 id="modal-breach-title">Checking Breach Database...</h4>
+                        <p id="modal-breach-desc"></p>
+                    </div>
+                </div>
+
+                <!-- Fast Metrics Grid -->
+                <div class="modal-stats-grid">
+                    <div class="modal-stat-card">
+                        <span class="modal-stat-label">Length</span>
+                        <span id="modal-stat-length" class="modal-stat-value">0 chars</span>
+                    </div>
+                    <div class="modal-stat-card">
+                        <span class="modal-stat-label">Pool Size</span>
+                        <span id="modal-stat-pool" class="modal-stat-value">R = 0</span>
+                    </div>
+                    <div class="modal-stat-card">
+                        <span class="modal-stat-label">GPU Crack Time</span>
+                        <span id="modal-stat-crack" class="modal-stat-value">Instant</span>
+                    </div>
+                </div>
+
+                <!-- Predictability Warning (if any) -->
+                <div id="modal-pattern-box" class="modal-pattern-box hidden">
+                    <div class="modal-pattern-header">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                            <line x1="12" y1="9" x2="12" y2="13"></line>
+                            <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                        </svg>
+                        <strong>Heuristic &amp; Pattern Warning:</strong>
+                    </div>
+                    <p id="modal-pattern-text" class="modal-pattern-desc"></p>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" id="modal-scroll-btn" class="btn btn-secondary">
+                    <span>View Full Breakdown</span>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
+                </button>
+                <button type="button" id="modal-done-btn" class="btn btn-primary">
+                    <span>Done</span>
+                </button>
+            </div>
+        </div>
     </div>
 
     <!-- Notification Toast -->
