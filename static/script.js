@@ -24,6 +24,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // Generator elements
     const genLengthSlider = document.getElementById('gen-length');
     const genLengthVal = document.getElementById('gen-length-val');
+    const lengthDecBtn = document.getElementById('length-dec-btn');
+    const lengthIncBtn = document.getElementById('length-inc-btn');
+    const lengthSecurityBadge = document.getElementById('length-security-badge');
+    const lengthBadgeText = document.getElementById('length-badge-text');
     const genUpper = document.getElementById('gen-upper');
     const genLower = document.getElementById('gen-lower');
     const genDigits = document.getElementById('gen-digits');
@@ -543,11 +547,111 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // -------------------------------------------------------------
-    // Password Generator
+    // Password Generator Length Control Center
     // -------------------------------------------------------------
-    genLengthSlider.addEventListener('input', (e) => {
-        genLengthVal.textContent = e.target.value;
+    function setPasswordLength(val) {
+        let num = parseInt(val, 10);
+        if (isNaN(num)) num = 16;
+        num = Math.max(8, Math.min(48, num));
+
+        if (genLengthSlider) {
+            genLengthSlider.value = num;
+            const percent = ((num - 8) / (48 - 8)) * 100;
+            genLengthSlider.style.background = `linear-gradient(to right, var(--color-primary) 0%, var(--color-primary) ${percent}%, rgba(255, 255, 255, 0.1) ${percent}%, rgba(255, 255, 255, 0.1) 100%)`;
+        }
+
+        if (genLengthVal) {
+            genLengthVal.textContent = num;
+        }
+
+        // Live Security Badge & Rating Feedback
+        if (lengthSecurityBadge && lengthBadgeText) {
+            lengthSecurityBadge.className = 'length-security-badge';
+            if (num < 12) {
+                lengthSecurityBadge.classList.add('badge-weak');
+                lengthBadgeText.textContent = 'Too Short (Weak)';
+            } else if (num < 16) {
+                lengthSecurityBadge.classList.add('badge-fair');
+                lengthBadgeText.textContent = 'Fair (Basic)';
+            } else if (num < 20) {
+                lengthSecurityBadge.classList.add('badge-recommended');
+                lengthBadgeText.textContent = 'Recommended ★';
+            } else if (num < 28) {
+                lengthSecurityBadge.classList.add('badge-strong');
+                lengthBadgeText.textContent = 'Strong Protection';
+            } else {
+                lengthSecurityBadge.classList.add('badge-ultra');
+                lengthBadgeText.textContent = 'Ultra Secure 🛡️';
+            }
+        }
+
+        // Stepper button disabled bounds
+        if (lengthDecBtn) lengthDecBtn.disabled = (num <= 8);
+        if (lengthIncBtn) lengthIncBtn.disabled = (num >= 48);
+
+        // Synchronize Quick Tap preset pills
+        const pills = document.querySelectorAll('.len-pill');
+        pills.forEach(pill => {
+            const pLen = parseInt(pill.getAttribute('data-length'), 10);
+            if (pLen === num) {
+                pill.classList.add('active');
+            } else {
+                pill.classList.remove('active');
+            }
+        });
+
+        // Synchronize track tick marks
+        const ticks = document.querySelectorAll('.tick-mark');
+        ticks.forEach(tick => {
+            const tVal = parseInt(tick.getAttribute('data-val'), 10);
+            if (tVal === num) {
+                tick.classList.add('active-mark');
+            } else {
+                tick.classList.remove('active-mark');
+            }
+        });
+    }
+
+    if (genLengthSlider) {
+        genLengthSlider.addEventListener('input', (e) => {
+            setPasswordLength(e.target.value);
+        });
+    }
+
+    if (lengthDecBtn) {
+        lengthDecBtn.addEventListener('click', () => {
+            const current = parseInt(genLengthSlider ? genLengthSlider.value : 16, 10);
+            setPasswordLength(current - 1);
+        });
+    }
+
+    if (lengthIncBtn) {
+        lengthIncBtn.addEventListener('click', () => {
+            const current = parseInt(genLengthSlider ? genLengthSlider.value : 16, 10);
+            setPasswordLength(current + 1);
+        });
+    }
+
+    // Quick Tap Preset Pills Click
+    document.querySelectorAll('.len-pill').forEach(pill => {
+        pill.addEventListener('click', () => {
+            const len = pill.getAttribute('data-length');
+            if (len) setPasswordLength(len);
+        });
     });
+
+    // Slider Tick Marks Click
+    document.querySelectorAll('.tick-mark').forEach(tick => {
+        tick.addEventListener('click', () => {
+            const val = tick.getAttribute('data-val');
+            if (val) setPasswordLength(val);
+        });
+    });
+
+    // Initialize initial state on load
+    if (genLengthSlider) {
+        setPasswordLength(genLengthSlider.value || 16);
+    }
 
     generateBtn.addEventListener('click', async () => {
         const length = genLengthSlider.value;

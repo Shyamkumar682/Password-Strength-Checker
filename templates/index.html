@@ -152,9 +152,57 @@
                     </div>
 
                     <div class="gen-controls">
-                        <div class="length-slider-row">
-                            <label for="gen-length">Length: <strong id="gen-length-val">16</strong> characters</label>
-                            <input type="range" id="gen-length" min="8" max="48" value="16" class="range-slider">
+                        <!-- Intuitive Length Selector Control Center -->
+                        <div class="length-selector-container">
+                            <div class="length-header">
+                                <div class="length-title-wrap">
+                                    <label for="gen-length" class="length-label">Password Length</label>
+                                    <span id="length-security-badge" class="length-security-badge badge-recommended" title="Security rating for this length">
+                                        <span class="badge-dot"></span>
+                                        <span id="length-badge-text">Recommended</span>
+                                    </span>
+                                </div>
+                                <div class="length-stepper">
+                                    <button type="button" id="length-dec-btn" class="stepper-btn" aria-label="Decrease length" title="Decrease length (-1)">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                                        </svg>
+                                    </button>
+                                    <div class="stepper-display">
+                                        <span id="gen-length-val" class="stepper-number">16</span>
+                                        <span class="stepper-unit">chars</span>
+                                    </div>
+                                    <button type="button" id="length-inc-btn" class="stepper-btn" aria-label="Increase length" title="Increase length (+1)">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                            <line x1="12" y1="5" x2="12" y2="19"></line>
+                                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="slider-wrapper">
+                                <input type="range" id="gen-length" min="8" max="48" value="16" class="range-slider" aria-label="Password length slider">
+                                <div class="slider-ticks" id="slider-ticks">
+                                    <span class="tick-mark" data-val="8" title="Minimum length">8 <small>Min</small></span>
+                                    <span class="tick-mark" data-val="12" title="Basic security">12</span>
+                                    <span class="tick-mark active-mark" data-val="16" title="Recommended length">16 <small>Ideal</small></span>
+                                    <span class="tick-mark" data-val="24" title="High security">24</span>
+                                    <span class="tick-mark" data-val="32" title="Military grade">32</span>
+                                    <span class="tick-mark" data-val="48" title="Maximum length">48 <small>Max</small></span>
+                                </div>
+                            </div>
+
+                            <div class="length-presets">
+                                <span class="presets-label">Quick Tap:</span>
+                                <div class="preset-pills-row" id="length-preset-pills">
+                                    <button type="button" class="len-pill" data-length="12">12 chars</button>
+                                    <button type="button" class="len-pill active" data-length="16">16 <span class="pill-star">★ Best</span></button>
+                                    <button type="button" class="len-pill" data-length="20">20 chars</button>
+                                    <button type="button" class="len-pill" data-length="24">24 chars</button>
+                                    <button type="button" class="len-pill" data-length="32">32 chars</button>
+                                </div>
+                            </div>
                         </div>
 
                         <div class="gen-toggles">
